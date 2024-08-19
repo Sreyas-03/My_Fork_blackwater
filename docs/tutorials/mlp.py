@@ -167,7 +167,6 @@ def encode_data_v2_ecr(circuits, ideal_exp_vals, noisy_exp_vals, obs_size, meas_
     exp_val_slice = slice(len(vec)+len(gates_set)+num_angle_bins, len(vec)+len(gates_set)+num_angle_bins+obs_size)
     meas_basis_slice = slice(len(vec)+len(gates_set)+num_angle_bins+obs_size, len(X[0]))
 
-    # X[:, vec_slice] = vec[None, :]
 
     for i, circ in enumerate(circuits):
         gate_counts_all = circ.count_ops()
@@ -196,8 +195,10 @@ def encode_data_v2_ecr(circuits, ideal_exp_vals, noisy_exp_vals, obs_size, meas_
 
 
 def encode_data(circuits, properties, ideal_exp_vals, noisy_exp_vals, num_qubits, meas_bases=None):
+    print(len(noisy_exp_vals))
     if isinstance(noisy_exp_vals[0], list) and len(noisy_exp_vals[0]) == 1:
-        noisy_exp_vals = [x[0] for x in noisy_exp_vals]
+        noisy_exp_vals = [x for x in noisy_exp_vals]
+    print(noisy_exp_vals)
 
     gates_set = sorted(properties['gates_set'])     # must sort!
 
@@ -253,43 +254,43 @@ def encode_data(circuits, properties, ideal_exp_vals, noisy_exp_vals, num_qubits
 
 
 
-# def encode_data_old(circuits, properties, ideal_exp_vals, noisy_exp_vals, num_qubits):
-#     gates_set = sorted(properties['gates_set'])     # must sort!
-#
-#     vec = [np.mean(recursive_dict_loop(properties, out=[], target_key1='cx', target_key2='gate_error'))]
-#     vec += [np.mean(recursive_dict_loop(properties, out=[], target_key1='id', target_key2='gate_error'))]
-#     vec += [np.mean(recursive_dict_loop(properties, out=[], target_key1='sx', target_key2='gate_error'))]
-#     vec += [np.mean(recursive_dict_loop(properties, out=[], target_key1='x', target_key2='gate_error'))]
-#     vec += [np.mean(recursive_dict_loop(properties, out=[], target_key1='rz', target_key2='gate_error'))]
-#     vec += [np.mean(recursive_dict_loop(properties, out=[], target_key1='', target_key2='readout_error'))]
-#     vec += [np.mean(recursive_dict_loop(properties, out=[], target_key1='', target_key2='t1'))]
-#     vec += [np.mean(recursive_dict_loop(properties, out=[], target_key1='', target_key2='t2'))]
-#     vec = torch.tensor(vec) * 100  # put it in the same order of magnitude as the expectation values
-#     bin_size = 0.1 * np.pi
-#     num_angle_bins = int(np.ceil(4 * np.pi / bin_size))
-#
-#     X = torch.zeros([len(circuits), len(vec) + len(gates_set) + num_angle_bins + num_qubits])
-#
-#     X[:, :len(vec)] = vec[None, :]
-#
-#     for i, circ in enumerate(circuits):
-#         gate_counts_all = circ.count_ops()
-#         X[i, len(vec):len(vec) + len(gates_set)] = torch.tensor(
-#             [gate_counts_all.get(key, 0) for key in gates_set]
-#         ) * 0.01  # put it in the same order of magnitude as the expectation values
-#
-#     for i, circ in enumerate(circuits):
-#         gate_counts = count_gates_by_rotation_angle(circ, bin_size)
-#         X[i, len(vec) + len(gates_set): -num_qubits] = torch.tensor(gate_counts) * 0.01  # put it in the same order of magnitude as the expectation values
-#
-#         if num_qubits > 1: assert len(noisy_exp_vals[i]) == num_qubits
-#         elif num_qubits == 1: assert isinstance(noisy_exp_vals[i], float)
-#
-#         X[i, -num_qubits:] = torch.tensor(noisy_exp_vals[i])
-#
-#     y = torch.tensor(ideal_exp_vals, dtype=torch.float32)
-#
-#     return X, y
+def encode_data_old(circuits, properties, ideal_exp_vals, noisy_exp_vals, num_qubits):
+    gates_set = sorted(properties['gates_set'])     # must sort!
+
+    vec = [np.mean(recursive_dict_loop(properties, out=[], target_key1='cx', target_key2='gate_error'))]
+    vec += [np.mean(recursive_dict_loop(properties, out=[], target_key1='id', target_key2='gate_error'))]
+    vec += [np.mean(recursive_dict_loop(properties, out=[], target_key1='sx', target_key2='gate_error'))]
+    vec += [np.mean(recursive_dict_loop(properties, out=[], target_key1='x', target_key2='gate_error'))]
+    vec += [np.mean(recursive_dict_loop(properties, out=[], target_key1='rz', target_key2='gate_error'))]
+    vec += [np.mean(recursive_dict_loop(properties, out=[], target_key1='', target_key2='readout_error'))]
+    vec += [np.mean(recursive_dict_loop(properties, out=[], target_key1='', target_key2='t1'))]
+    vec += [np.mean(recursive_dict_loop(properties, out=[], target_key1='', target_key2='t2'))]
+    vec = torch.tensor(vec) * 100  # put it in the same order of magnitude as the expectation values
+    bin_size = 0.1 * np.pi
+    num_angle_bins = int(np.ceil(4 * np.pi / bin_size))
+
+    X = torch.zeros([len(circuits), len(vec) + len(gates_set) + num_angle_bins + num_qubits])
+
+    X[:, :len(vec)] = vec[None, :]
+
+    for i, circ in enumerate(circuits):
+        gate_counts_all = circ.count_ops()
+        X[i, len(vec):len(vec) + len(gates_set)] = torch.tensor(
+            [gate_counts_all.get(key, 0) for key in gates_set]
+        ) * 0.01  # put it in the same order of magnitude as the expectation values
+
+    for i, circ in enumerate(circuits):
+        gate_counts = count_gates_by_rotation_angle(circ, bin_size)
+        X[i, len(vec) + len(gates_set): -num_qubits] = torch.tensor(gate_counts) * 0.01  # put it in the same order of magnitude as the expectation values
+
+        if num_qubits > 1: assert len(noisy_exp_vals[i]) == num_qubits
+        elif num_qubits == 1: assert isinstance(noisy_exp_vals[i], float)
+
+        X[i, -num_qubits:] = torch.tensor(noisy_exp_vals[i])
+
+    y = torch.tensor(ideal_exp_vals, dtype=torch.float32)
+
+    return X, y
 
 
 
